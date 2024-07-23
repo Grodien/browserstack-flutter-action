@@ -1,0 +1,20 @@
+name: 'Flutter Browserstack upload and run action'
+description: 'Uploads a Flutter Android/iOS app to Browserstack and runs the tests'
+inputs:
+  browserstackUsername:
+    description: 'Browserstack Username'
+  browserstackAccessKey:
+    description: 'Browserstack Access Key'
+  project:
+    description: 'Projectname'
+  testPackagePath:
+    description: 'Flutter iOS Testpackage Path'
+  appFilePath:
+    description: 'Flutter Android apk'
+  testFilePath:
+    description: 'Flutter Android androidTest apk'
+  devices:
+    description: 'Devices to test on see https://www.browserstack.com/list-of-browsers-and-platforms/app_automate'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
