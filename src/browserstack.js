@@ -6,7 +6,11 @@ const path = require('path');
 const ANDROID_APP_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/app";
 const ANDROID_TESTSUITE_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/test-suite";
 const ANDROID_TRIGGER_BUILD_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/build";
-const ANDROID_BUILDS_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/builds/";
+const ANDROID_BUILDS_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/builds";
+
+const IOS_TEST_PACKAGE_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/ios/test-package";
+const IOS_TRIGGER_BUILD_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/ios/build";
+const IOS_BUILDS_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/ios/builds";
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -98,20 +102,63 @@ class Browserstack {
         }
     }
 
-    static async _checkAndroidBuild(actionInput, buildId) {
+    static async _triggerIOSBuild(actionInput, testPackageUrl) {
+        const body = {
+            testPackage: testPackageUrl,
+            devices: actionInput.devices.split(","),
+            networkLogs: true,
+            deviceLogs: true,
+        };
+        if (actionInput.project) body.project = actionInput.project;
+        if (actionInput.buildTag) body.buildTag = actionInput.buildTag;
+
         const options = {
-            url: `https://${actionInput.browserstackUsername}:${actionInput.browserstackAccessKey}@${ANDROID_BUILDS_ENDPOINT}/${buildId}`,
+            url: `https://${actionInput.browserstackUsername}:${actionInput.browserstackAccessKey}@${IOS_TRIGGER_BUILD_ENDPOINT}`,
+            body: JSON.stringify(body),
+            headers: {
+                'content-type': 'application/json'
+            }
         };
 
+        core.info(`Triggering ios build with testPackage=${testPackageUrl} on devices=${actionInput.devices}`);
         let response;
         try {
-            response = await this._doGet(options);
-            core.info(`Build status ${response}`);
+            response = await this._doPost(options);
+            core.info(`Triggered build ${response}`);
             return response;
         } catch (error) {
             core.setFailed(error);
             return null;
         }
+    }
+
+    static async _checkBuild(actionInput, endpoint, buildId) {
+        const options = {
+            url: `https://${actionInput.browserstackUsername}:${actionInput.browserstackAccessKey}@${endpoint}/${buildId}`,
+        };
+
+        let buildSuccessful = false;
+        let checkStatus = true;
+
+        let response;
+
+        while (checkStatus) {
+            await delay(30000);
+
+            response = await this._doGet(options);
+            core.info(`Build status ${response}`);
+            if (!response) return false;
+
+            const build = JSON.parse(response);
+            checkStatus = build.status === 'queued' || build.status === 'running';
+            buildSuccessful = build.status === 'passed'
+        }
+
+        if (!buildSuccessful) {
+            core.setFailed(response);
+            return false;
+        }
+        return true;
     }
 
     static async uploadAndroidAndRunTests(actionInput) {
@@ -134,28 +181,24 @@ class Browserstack {
         const buildId = JSON.parse(buildResponse).build_id;
         core.exportVariable("build_id", buildId);
 
-        let buildSuccessful = false;
-        let checkStatus = true;
+        return await this._checkBuild(actionInput, ANDROID_BUILDS_ENDPOINT, buildId);
+    }
 
-        let response;
+    static async uploadIOSAndRunTests(actionInput) {
 
-        while (checkStatus) {
-            await delay(30000);
+        const testPackageResponse = await this._uploadFile(actionInput, actionInput.testPackagePath, IOS_TEST_PACKAGE_ENDPOINT);
+        if (!testPackageResponse) return false;
 
-            response = await this._checkAndroidBuild(actionInput, buildId);
-            if (!response) return false;
+        const testPackageUrl = JSON.parse(testPackageResponse).test_package_url;
+        core.exportVariable("test_package_url", testPackageUrl);
 
-            const build = JSON.parse(response);
-            checkStatus = build.status === 'queued' || build.status === 'running';
-            buildSuccessful = build.status === 'passed'
-        }
+        const buildResponse = await this._triggerIOSBuild(actionInput, testPackageUrl);
+        if (!buildResponse) return false;
 
-        if (!buildSuccessful) {
-            core.setFailed(response);
-            return false;
-        }
+        const buildId = JSON.parse(buildResponse).build_id;
+        core.exportVariable("build_id", buildId);
 
-        return true;
+        return await this._checkBuild(actionInput, IOS_BUILDS_ENDPOINT, buildId);
     }
 
 }

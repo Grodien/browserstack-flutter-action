@@ -30,4 +30,16 @@ describe('Browserstack Tests', () => {
         let result = await Browserstack.uploadAndroidAndRunTests(actionInput);
         expect(result).to.equal(true);
     }).timeout(600000);
+
+    it('should upload and start iOS tests', async () => {
+        stubbedInput.withArgs("browserstackUsername").returns("<replace-with-username>");
+        stubbedInput.withArgs("browserstackAccessKey").returns("<replace-with-accessKey>");
+        stubbedInput.withArgs("project").returns("actionTest");
+        stubbedInput.withArgs("testPackagePath").returns("<testPackagePath>");
+        stubbedInput.withArgs("devices").returns("iPad 9th-15");
+
+        const actionInput = new ActionInput();
+        let result = await Browserstack.uploadIOSAndRunTests(actionInput);
+        expect(result).to.equal(true);
+    }).timeout(600000);
 });
