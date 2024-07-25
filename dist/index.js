@@ -29188,6 +29188,71 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 589:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const core = __nccwpck_require__(4181);
+const fs = __nccwpck_require__(7147);
+
+class ActionInput {
+    constructor() {
+        this._parseInput();
+        this._validateInput();
+    }
+
+    _parseInput() {
+        this.browserstackUsername = core.getInput('browserstackUsername');
+        this.browserstackAccessKey = core.getInput('browserstackAccessKey');
+        this.project = core.getInput('project');
+        this.testPackagePath = core.getInput('testPackagePath');
+        this.appFilePath = core.getInput('appFilePath');
+        this.testFilePath = core.getInput('testFilePath');
+        this.devices = core.getInput('devices');
+        this.customId = core.getInput('customId');
+        this.buildTag = core.getInput('buildTag');
+
+        this.isAndroid = this.appFilePath && this.testFilePath;
+        this.isIOS = this.testPackagePath;
+    }
+
+    _validateInput() {
+        if (!this.browserstackUsername) {
+            throw Error(`browserstackUsername not set`);
+        }
+        if (!this.browserstackAccessKey) {
+            throw Error(`browserstackAccessKey not set`);
+        }
+
+        if (!this.isAndroid && !this.isIOS) {
+            throw Error(`Action needs at least one of testPackagePath (iOS) or appFilePath & testFilePath (Android) defined`);
+        }
+
+        if (this.isAndroid && this.isIOS) {
+            throw Error(`Android and iOS at the same time is not supported`);
+        }
+
+        if (!this.devices) {
+            throw Error(`Action needs at least 1 device defined`);
+        }
+
+        if (this.appFilePath && !fs.existsSync(this.appFilePath)) {
+            throw Error(`App specified in appFilePath doesn't exist`);
+        }
+
+        if (this.testFilePath && !fs.existsSync(this.testFilePath)) {
+            throw Error(`App specified in testFilePath doesn't exist`);
+        }
+
+        if (this.testPackagePath && !fs.existsSync(this.testPackagePath)) {
+            throw Error(`Package specified in testPackagePath doesn't exist`);
+        }
+    }
+}
+
+module.exports = ActionInput;
+
+/***/ }),
+
 /***/ 9491:
 /***/ ((module) => {
 
@@ -31080,25 +31145,22 @@ var __webpack_exports__ = {};
 (() => {
 const core = __nccwpck_require__(4181);
 const github = __nccwpck_require__(2726);
+const ActionInput = __nccwpck_require__(589);
 
-try {
-    const browserstackUsername = core.getInput('browserstackUsername');
-    const browserstackAccessKey = core.getInput('browserstackAccessKey');
-    const project = core.getInput('project');
-    const testPackagePath = core.getInput('testPackagePath');
-    const appFilePath = core.getInput('appFilePath');
-    const testFilePath = core.getInput('testFilePath');
-    const devices = core.getInput('devices');
+const IOS_TESTPACKAGE_ENDPOINT = "https://api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/ios/test-package";
 
-    if (!browserstackUsername) throw Error(`browserstackUsername not found`);
-    if (!browserstackAccessKey) throw Error(`browserstackAccessKey not found`);
+const run = async () => {
+    try {
+        console.log(`Starting action...`);
+        const actionInput = new ActionInput();
+        const payload = JSON.stringify(github.context.payload, undefined, 2)
+        console.log(`The event payload: ${payload}`);
+    } catch (e) {
+        core.setFailed(`Action Failed: ${e}`);
+    }
+};
 
-    console.log(`Starting action...`);
-    const payload = JSON.stringify(github.context.payload, undefined, 2)
-    console.log(`The event payload: ${payload}`);
-} catch (error) {
-    core.setFailed(error.message);
-}
+run();
 })();
 
 module.exports = __webpack_exports__;

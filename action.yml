@@ -15,6 +15,10 @@ inputs:
     description: 'Flutter Android androidTest apk'
   devices:
     description: 'Devices to test on see https://www.browserstack.com/list-of-browsers-and-platforms/app_automate'
+  buildTag:
+    description: 'Build Tag for the triggered testrun'
+  customId:
+    description: 'Custom Id for the uploaded files'
 runs:
   using: 'node20'
   main: 'dist/index.js'
