@@ -154,10 +154,13 @@ class Browserstack {
             buildSuccessful = build.status === 'passed'
         }
 
+        core.exportVariable("test_result", response);
+
         if (!buildSuccessful) {
             core.setFailed(response);
             return false;
         }
+
         return true;
     }
 

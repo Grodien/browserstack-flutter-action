@@ -19,6 +19,17 @@ inputs:
     description: 'Build Tag for the triggered testrun'
   customId:
     description: 'Custom Id for the uploaded files'
+outputs:
+  app_url:
+    description: 'The app url for the Android APK on Browserstack'
+  test_suite_url:
+    description: 'The test file url for the Android APK on Browserstack'
+  test_package_url:
+    description: 'The test package url for the iOS App on Browserstack'
+  build_id:
+    description: 'The build id for the triggered testrun'
+  test_result:
+    description: 'The test result from browserstack (json)'
 runs:
   using: 'node20'
   main: 'dist/index.js'
