@@ -1,4 +1,4 @@
-name: 'Flutter Browserstack upload and run action'
+name: 'Browserstack Flutter Action'
 description: 'Uploads a Flutter Android/iOS app to Browserstack and runs the tests'
 inputs:
   browserstackUsername:
