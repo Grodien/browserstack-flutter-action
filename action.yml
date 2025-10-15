@@ -15,6 +15,12 @@ inputs:
     description: 'Flutter Android androidTest apk'
   devices:
     description: 'Devices to test on see https://www.browserstack.com/list-of-browsers-and-platforms/app_automate'
+  locale:
+    description: 'The locale of the app, defaults to `US`'
+    default: 'US'
+  language:
+    description: 'The language of the app, defaults to `en`'
+    default: 'en'
   buildTag:
     description: 'Build Tag for the triggered testrun'
   customId:

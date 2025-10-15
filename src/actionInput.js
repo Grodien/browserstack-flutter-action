@@ -15,6 +15,8 @@ class ActionInput {
         this.appFilePath = core.getInput('appFilePath');
         this.testFilePath = core.getInput('testFilePath');
         this.devices = core.getInput('devices');
+        this.locale = core.getInput('locale', {required: false});
+        this.language = core.getInput('language', {required: false});
         this.customId = core.getInput('customId');
         this.buildTag = core.getInput('buildTag');
 
