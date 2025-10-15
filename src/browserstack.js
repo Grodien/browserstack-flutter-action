@@ -112,6 +112,7 @@ class Browserstack {
             language: actionInput.language,
             networkLogs: true,
             deviceLogs: true,
+            deviceOrientation: 'landscape',
         };
         if (actionInput.project) body.project = actionInput.project;
         if (actionInput.buildTag) body.buildTag = actionInput.buildTag;
