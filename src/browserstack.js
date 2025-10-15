@@ -76,6 +76,8 @@ class Browserstack {
             app: appUrl,
             testSuite: testSuiteUrl,
             devices: actionInput.devices.split(","),
+            locale: actionInput.locale,
+            language: actionInput.language,
             networkLogs: true,
             deviceLogs: true,
         };
@@ -106,6 +108,8 @@ class Browserstack {
         const body = {
             testPackage: testPackageUrl,
             devices: actionInput.devices.split(","),
+            locale: actionInput.locale,
+            language: actionInput.language,
             networkLogs: true,
             deviceLogs: true,
         };
