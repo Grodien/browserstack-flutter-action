@@ -8,8 +8,7 @@ This action fulfils the following objectives in your runner environment:
 
 ## Prerequisites
 
-* The **actions/checkout@v4** action should be invoked prior to invoking this action as we will be using config files
-  committed to the repo
+* The [actions/checkout](https://github.com/marketplace/actions/checkout) action should be invoked prior to invoking this action as we will be using config files committed to the repo
 * App and Tests have to be build before this step see:
     * iOS: https://www.browserstack.com/docs/app-automate/flutter-ios/getting-started
     * Android: https://www.browserstack.com/docs/app-automate/flutter/getting-started
