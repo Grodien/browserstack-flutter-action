@@ -51,6 +51,14 @@ This action fulfils the following objectives in your runner environment:
 * `test_result`:
     * The test result from browserstack (json)
 
+## Artifacts
+
+After the testrun finishes, the action uploads a job artifact named
+`browserstack-test-report-<build_id>` containing `browserstack-test-report.json` with the
+full build result and the detailed testcase results of every session, as returned by the
+Browserstack API. The build id suffix keeps artifact names unique when multiple builds
+(e.g. Android and iOS) run in the same workflow.
+
 ## Usage
 
 Use the code snippet below in your workflow to upload run a flutter android test:

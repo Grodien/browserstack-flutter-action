@@ -1,6 +1,8 @@
 const request = require('request');
 const core = require('@actions/core');
+const {DefaultArtifactClient} = require('@actions/artifact');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const ANDROID_APP_ENDPOINT = "api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/app";
@@ -173,6 +175,7 @@ class Browserstack {
         core.exportVariable("test_result", response);
 
         const report = await this._printTestReport(actionInput, endpoint, build);
+        await this._uploadTestReportArtifact(build, report);
 
         if (!buildSuccessful) {
             const failedTests = report.failed.length > 0 ? ` Failed tests: ${report.failed.join(', ')}` : '';
@@ -199,7 +202,7 @@ class Browserstack {
     }
 
     static async _printTestReport(actionInput, endpoint, build) {
-        const report = {total: 0, failed: []};
+        const report = {total: 0, failed: [], sessions: []};
 
         core.info('');
         core.info('Test report');
@@ -212,6 +215,15 @@ class Browserstack {
                 core.info(`${deviceName} - session ${session.id}`);
 
                 const sessionDetails = await this._fetchSessionDetails(actionInput, endpoint, build.id, session.id);
+                if (sessionDetails) {
+                    report.sessions.push({
+                        device: device.device,
+                        os: device.os,
+                        os_version: device.os_version,
+                        session: sessionDetails,
+                    });
+                }
+
                 const testClasses = sessionDetails?.testcases?.data;
                 if (!testClasses) {
                     core.warning(`No test case details available for session ${session.id} (status: ${session.status})`);
@@ -250,6 +262,22 @@ class Browserstack {
         core.info('');
 
         return report;
+    }
+
+    static async _uploadTestReportArtifact(build, report) {
+        const artifactName = `browserstack-test-report-${build.id}`;
+
+        try {
+            const reportDir = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'browserstack-test-report-'));
+            const reportPath = path.join(reportDir, 'browserstack-test-report.json');
+            fs.writeFileSync(reportPath, JSON.stringify({build, sessions: report.sessions}, null, 2));
+
+            const artifactClient = new DefaultArtifactClient();
+            const {size} = await artifactClient.uploadArtifact(artifactName, [reportPath], reportDir);
+            core.info(`Uploaded test report artifact '${artifactName}' (${size} bytes)`);
+        } catch (error) {
+            core.warning(`Could not upload test report artifact '${artifactName}': ${error}`);
+        }
     }
 
     static async uploadAndroidAndRunTests(actionInput) {
