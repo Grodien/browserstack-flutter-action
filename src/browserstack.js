@@ -63,7 +63,8 @@ class Browserstack {
         let response;
         try {
             response = await this._doPost(options);
-            core.info(`Uploaded complete ${response}`);
+            core.info(`Upload complete`);
+            core.debug(`Upload response: ${response}`);
             return response;
         } catch (error) {
             core.setFailed(error);
@@ -96,7 +97,8 @@ class Browserstack {
         let response;
         try {
             response = await this._doPost(options);
-            core.info(`Triggered build ${response}`);
+            core.info(`Build triggered`);
+            core.debug(`Trigger build response: ${response}`);
             return response;
         } catch (error) {
             core.setFailed(error);
@@ -129,7 +131,8 @@ class Browserstack {
         let response;
         try {
             response = await this._doPost(options);
-            core.info(`Triggered build ${response}`);
+            core.info(`Build triggered`);
+            core.debug(`Trigger build response: ${response}`);
             return response;
         } catch (error) {
             core.setFailed(error);
