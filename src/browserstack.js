@@ -149,27 +149,107 @@ class Browserstack {
         let checkStatus = true;
 
         let response;
+        let build;
 
         while (checkStatus) {
             await delay(30000);
 
             response = await this._doGet(options);
-            core.info(`Build status ${response}`);
             if (!response) return false;
 
-            const build = JSON.parse(response);
+            build = JSON.parse(response);
             checkStatus = build.status === 'queued' || build.status === 'running';
-            buildSuccessful = build.status === 'passed'
+            buildSuccessful = build.status === 'passed';
+
+            if (checkStatus) {
+                core.info(`Build status: ${build.status}`);
+                core.debug(`Build response: ${response}`);
+            } else {
+                core.info(`Build finished with status: ${build.status}`);
+                core.info(`Build response: ${response}`);
+            }
         }
 
         core.exportVariable("test_result", response);
 
+        const report = await this._printTestReport(actionInput, endpoint, build);
+
         if (!buildSuccessful) {
-            core.setFailed(response);
+            const failedTests = report.failed.length > 0 ? ` Failed tests: ${report.failed.join(', ')}` : '';
+            core.setFailed(`Build ${buildId} finished with status '${build.status}'.${failedTests}`);
             return false;
         }
 
         return true;
+    }
+
+    static async _fetchSessionDetails(actionInput, endpoint, buildId, sessionId) {
+        const options = {
+            url: `https://${actionInput.browserstackUsername}:${actionInput.browserstackAccessKey}@${endpoint}/${buildId}/sessions/${sessionId}`,
+        };
+
+        try {
+            const response = await this._doGet(options);
+            core.debug(`Session ${sessionId} response: ${response}`);
+            return JSON.parse(response);
+        } catch (error) {
+            core.warning(`Could not fetch session details for session ${sessionId}: ${error}`);
+            return null;
+        }
+    }
+
+    static async _printTestReport(actionInput, endpoint, build) {
+        const report = {total: 0, failed: []};
+
+        core.info('');
+        core.info('Test report');
+        core.info('===========');
+
+        for (const device of build.devices ?? []) {
+            const deviceName = `${device.device} (${device.os} ${device.os_version})`;
+
+            for (const session of device.sessions ?? []) {
+                core.info(`${deviceName} - session ${session.id}`);
+
+                const sessionDetails = await this._fetchSessionDetails(actionInput, endpoint, build.id, session.id);
+                const testClasses = sessionDetails?.testcases?.data;
+                if (!testClasses) {
+                    core.warning(`No test case details available for session ${session.id} (status: ${session.status})`);
+                    continue;
+                }
+
+                for (const testClass of testClasses) {
+                    for (const testcase of testClass.testcases ?? []) {
+                        report.total++;
+                        const testName = `${testClass.class} > ${testcase.name}`;
+                        const duration = testcase.duration ? ` (${testcase.duration}s)` : '';
+                        const line = `  [${testcase.status}] ${testName}${duration}`;
+
+                        if (testcase.status === 'passed' || testcase.status === 'skipped') {
+                            core.info(line);
+                        } else {
+                            core.error(line);
+                            report.failed.push(`${testName} on ${deviceName}`);
+                        }
+                    }
+                }
+            }
+        }
+
+        core.info('===========');
+        if (report.total === 0) {
+            core.warning('No test cases were reported by Browserstack');
+        } else if (report.failed.length === 0) {
+            core.info(`✅ All ${report.total} tests passed`);
+        } else {
+            core.error(`❌ ${report.failed.length} of ${report.total} tests failed:`);
+            for (const failedTest of report.failed) {
+                core.error(`  ${failedTest}`);
+            }
+        }
+        core.info('');
+
+        return report;
     }
 
     static async uploadAndroidAndRunTests(actionInput) {
