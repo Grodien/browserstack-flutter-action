@@ -37,6 +37,10 @@ This action fulfils the following objectives in your runner environment:
     * Optional buildTag for the testrun that will be shown on browserstack
 * `customId`:
     * Optional customId for the uploaded packages that will be shown on browserstack
+* `generateTestReport`:
+    * Optional, defaults to `true`. Whether to fetch per-session test details, print the test report, and write the report file. When `false`, `uploadTestReportArtifact` is silently ignored, since there is no report to upload.
+* `uploadTestReportArtifact`:
+    * Optional, defaults to `true`. Whether to upload the test report file as a job artifact. Ignored when `generateTestReport` is `false`.
 
 ## Outputs
 
@@ -50,14 +54,28 @@ This action fulfils the following objectives in your runner environment:
     * The build id for the triggered testrun
 * `test_result`:
     * The test result from browserstack (json)
+* `test_report_path`:
+    * The file path of the generated test report json. Only set when `generateTestReport` is `true`.
+
+All outputs are exported as environment variables (e.g. `env.test_report_path`), not as
+[GitHub Actions step outputs](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#outputsoutput_id).
 
 ## Artifacts
 
-After the testrun finishes, the action uploads a job artifact named
-`browserstack-test-report-<build_id>` containing `browserstack-test-report.json` with the
-full build result and the detailed testcase results of every session, as returned by the
-Browserstack API. The build id suffix keeps artifact names unique when multiple builds
-(e.g. Android and iOS) run in the same workflow.
+When `generateTestReport` is `true` (the default), the testrun's report is fetched and
+printed to the log, and `browserstack-test-report.json` (containing the full build result
+and the detailed testcase results of every session, as returned by the Browserstack API)
+is written to disk; its path is exported as `test_report_path`.
+
+When `uploadTestReportArtifact` is also `true` (the default), that file is additionally
+uploaded as a job artifact named `browserstack-test-report-<build_id>`. The build id suffix
+keeps artifact names unique when multiple builds (e.g. Android and iOS) run in the same
+workflow. Set `uploadTestReportArtifact` to `false` to keep the local file and skip the
+artifact upload.
+
+Set `generateTestReport` to `false` to skip fetching session details, printing the report,
+writing the file, and uploading the artifact altogether; in that case
+`uploadTestReportArtifact` is ignored.
 
 ## Usage
 
