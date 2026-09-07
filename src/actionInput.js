@@ -19,6 +19,8 @@ class ActionInput {
         this.language = core.getInput('language', {required: false});
         this.customId = core.getInput('customId');
         this.buildTag = core.getInput('buildTag');
+        this.generateTestReport = this._parseBooleanInput('generateTestReport', true);
+        this.uploadTestReportArtifact = this._parseBooleanInput('uploadTestReportArtifact', true);
 
         this.isAndroid = this.appFilePath && this.testFilePath;
         this.isIOS = this.testPackagePath;
@@ -55,6 +57,17 @@ class ActionInput {
         if (this.testPackagePath && !fs.existsSync(this.testPackagePath)) {
             throw Error(`Package specified in testPackagePath doesn't exist`);
         }
+    }
+
+    _parseBooleanInput(name, defaultValue) {
+        const raw = core.getInput(name, {required: false});
+        if (!raw) return defaultValue;
+
+        const normalized = raw.trim().toLowerCase();
+        if (normalized === 'true') return true;
+        if (normalized === 'false') return false;
+
+        throw Error(`Input '${name}' must be 'true' or 'false', got '${raw}'`);
     }
 }
 

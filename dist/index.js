@@ -109354,6 +109354,8 @@ class ActionInput {
         this.language = core.getInput('language', {required: false});
         this.customId = core.getInput('customId');
         this.buildTag = core.getInput('buildTag');
+        this.generateTestReport = this._parseBooleanInput('generateTestReport', true);
+        this.uploadTestReportArtifact = this._parseBooleanInput('uploadTestReportArtifact', true);
 
         this.isAndroid = this.appFilePath && this.testFilePath;
         this.isIOS = this.testPackagePath;
@@ -109390,6 +109392,17 @@ class ActionInput {
         if (this.testPackagePath && !fs.existsSync(this.testPackagePath)) {
             throw Error(`Package specified in testPackagePath doesn't exist`);
         }
+    }
+
+    _parseBooleanInput(name, defaultValue) {
+        const raw = core.getInput(name, {required: false});
+        if (!raw) return defaultValue;
+
+        const normalized = raw.trim().toLowerCase();
+        if (normalized === 'true') return true;
+        if (normalized === 'false') return false;
+
+        throw Error(`Input '${name}' must be 'true' or 'false', got '${raw}'`);
     }
 }
 
@@ -109576,12 +109589,29 @@ class Browserstack {
 
         core.exportVariable("test_result", response);
 
-        const report = await this._printTestReport(actionInput, endpoint, build);
-        await this._uploadTestReportArtifact(build, report);
+        let report = null;
+        if (actionInput.generateTestReport) {
+            report = await this._printTestReport(actionInput, endpoint, build);
+
+            const reportPath = this._writeTestReportFile(build, report);
+            if (reportPath) {
+                core.exportVariable("test_report_path", reportPath);
+
+                if (actionInput.uploadTestReportArtifact) {
+                    await this._uploadTestReportArtifact(build, reportPath);
+                } else {
+                    core.info(`Skipping test report artifact upload (uploadTestReportArtifact=false)`);
+                }
+            }
+        } else {
+            core.info(`Skipping test report generation (generateTestReport=false)`);
+        }
 
         if (!buildSuccessful) {
-            const failedTests = report.failed.length > 0 ? ` Failed tests: ${report.failed.join(', ')}` : '';
-            core.setFailed(`Build ${buildId} finished with status '${build.status}'.${failedTests}`);
+            const failureDetail = report
+                ? (report.failed.length > 0 ? ` Failed tests: ${report.failed.join(', ')}` : '')
+                : ` See the test_result output for details.`;
+            core.setFailed(`Build ${buildId} finished with status '${build.status}'.${failureDetail}`);
             return false;
         }
 
@@ -109666,16 +109696,24 @@ class Browserstack {
         return report;
     }
 
-    static async _uploadTestReportArtifact(build, report) {
-        const artifactName = `browserstack-test-report-${build.id}`;
-
+    static _writeTestReportFile(build, report) {
         try {
             const reportDir = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'browserstack-test-report-'));
             const reportPath = path.join(reportDir, 'browserstack-test-report.json');
             fs.writeFileSync(reportPath, JSON.stringify({build, sessions: report.sessions}, null, 2));
+            return reportPath;
+        } catch (error) {
+            core.warning(`Could not write test report file for build '${build.id}': ${error}`);
+            return null;
+        }
+    }
 
+    static async _uploadTestReportArtifact(build, reportPath) {
+        const artifactName = `browserstack-test-report-${build.id}`;
+
+        try {
             const artifactClient = new DefaultArtifactClient();
-            const {size} = await artifactClient.uploadArtifact(artifactName, [reportPath], reportDir);
+            const {size} = await artifactClient.uploadArtifact(artifactName, [reportPath], path.dirname(reportPath));
             core.info(`Uploaded test report artifact '${artifactName}' (${size} bytes)`);
         } catch (error) {
             core.warning(`Could not upload test report artifact '${artifactName}': ${error}`);
@@ -167651,6 +167689,9 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/asset-relocator-loader */
+/******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
+/******/ 	
 /******/ 	/* webpack/runtime/node module decorator */
 /******/ 	(() => {
 /******/ 		__nccwpck_require__.nmd = (module) => {
@@ -167659,10 +167700,6 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ 			return module;
 /******/ 		};
 /******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/compat */
-/******/ 	
-/******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
 /******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};

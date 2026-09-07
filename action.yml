@@ -25,6 +25,12 @@ inputs:
     description: 'Build Tag for the triggered testrun'
   customId:
     description: 'Custom Id for the uploaded files'
+  generateTestReport:
+    description: 'Whether to fetch per-session test details, print the test report, and write the report file. When false, uploadTestReportArtifact is ignored.'
+    default: 'true'
+  uploadTestReportArtifact:
+    description: 'Whether to upload the test report file as a job artifact. Ignored when generateTestReport is false.'
+    default: 'true'
 outputs:
   app_url:
     description: 'The app url for the Android APK on Browserstack'
@@ -35,7 +41,9 @@ outputs:
   build_id:
     description: 'The build id for the triggered testrun'
   test_result:
-    description: 'The test result from browserstack (json)'
+    description: 'The test result from Browserstack (json)'
+  test_report_path:
+    description: 'The file path of the generated test report json (only set when generateTestReport is true)'
 runs:
   using: 'node24'
   main: 'dist/index.js'
